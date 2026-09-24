@@ -80,13 +80,13 @@ function clearSession(){localStorage.removeItem('pathoSession')}
 function shuffle(items){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]]}return result}
 function start(newMode,resume=false){
   const saved=resume?loadSession():null;
-  if(saved){mode=saved.mode;order=saved.order;pos=saved.pos;score=saved.score;answered=false;currentAnswer=saved.lastAnswer||null}
+  if(saved){mode=saved.mode;order=saved.order;pos=saved.pos;score=saved.score;answered=saved.answered;currentAnswer=saved.lastAnswer||null}
   else{mode=newMode;score=0;pos=0;answered=false;currentAnswer=null;if(mode==='wrong')order=shuffle(questions.map(q=>q.index).filter(i=>wrongSet().has(i)));else order=shuffle(questions.map(q=>q.index));}
   if(!order.length){alert('復習する問題はありません。まず通常モードで問題に取り組んでください。');return}
   $('home').classList.add('hidden');$('result').classList.add('hidden');$('quiz').classList.remove('hidden'); render();
 }
 function render(){
-  current=questions[order[pos]]; const restoreAnswer=currentAnswer; answered=false; currentAnswer=null;
+  current=questions[order[pos]]; const restoreAnswer=currentAnswer; const restoreAnswered=answered; answered=false; currentAnswer=null;
   $('sectionName').textContent=current.section||'';
   $('progressText').textContent=`${pos+1} / ${order.length}`;
   $('progressBar').style.width=`${((pos)/order.length)*100}%`;
@@ -103,7 +103,7 @@ function render(){
     const btn=document.createElement('button');btn.className='primary';btn.style.marginTop='16px';btn.textContent='回答した → 解答・解説を表示';btn.onclick=()=>showSpecial();qa.appendChild(btn);
   }
   $('questionArea').replaceChildren(qa);
-  if(restoreAnswer){answered=true;currentAnswer=restoreAnswer;showFeedback(restoreAnswer===current.answer,restoreAnswer)}
+  if(restoreAnswer){answered=true;currentAnswer=restoreAnswer;showFeedback(restoreAnswer===current.answer,restoreAnswer)}else if(restoreAnswered)showSpecial();
 }
 function answerTF(ans){if(answered)return;answered=true;currentAnswer=ans; const correct=ans===current.answer; if(correct){score++; if(mode==='wrong') removeWrong(current.index)} else if(ans!=='わからない') addWrong(current.index); showFeedback(correct, ans);saveSession()}
 function showFeedback(correct, ans){
