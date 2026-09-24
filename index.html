@@ -75,7 +75,7 @@ function updatePill(){$('wrongPill').textContent=`間違えた問題 ${wrongSet(
 function addWrong(i){const a=loadWrong();if(!a.includes(i))a.push(i);saveWrong(a);updatePill()}
 function removeWrong(i){saveWrong(loadWrong().filter(x=>x!==i));updatePill()}
 function loadSession(){try{return JSON.parse(localStorage.getItem('pathoSession')||'null')}catch(e){return null}}
-function saveSession(){localStorage.setItem('pathoSession',JSON.stringify({mode,order,pos,score,answered,lastAnswer:answered&&current?.type==='tf'?currentAnswer:null}))}
+function saveSession(){localStorage.setItem('pathoSession',JSON.stringify({mode,order,pos,score,answered,lastAnswer:answered&&current?.type!=='special'?currentAnswer:null}))}
 function clearSession(){localStorage.removeItem('pathoSession')}
 function shuffle(items){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]]}return result}
 function start(newMode,resume=false){
@@ -98,19 +98,30 @@ function render(){
     c.innerHTML='<button class="choice" data-a="○">○</button><button class="choice" data-a="×">×</button><button class="choice" data-a="わからない">わからない</button>';
     c.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>answerTF(b.dataset.a)));
     qa.appendChild(c);
+  }else if(current.type==='review'){
+    const c=document.createElement('div');c.className='choices';
+    c.innerHTML='<button class="choice" data-a="○">○</button><button class="choice" data-a="×">×</button><button class="choice" data-a="わからない">わからない</button>';
+    c.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>answerReview(b.dataset.a)));
+    qa.appendChild(c);
   }else{
     const box=document.createElement('div');box.className='notice';box.textContent='この問題は資料内で「！」とされているため、単純な○×ではありません。回答後に正解のポイントを確認してください。';qa.appendChild(box);
     const btn=document.createElement('button');btn.className='primary';btn.style.marginTop='16px';btn.textContent='回答した → 解答・解説を表示';btn.onclick=()=>showSpecial();qa.appendChild(btn);
   }
   $('questionArea').replaceChildren(qa);
-  if(restoreAnswer){answered=true;currentAnswer=restoreAnswer;showFeedback(restoreAnswer===current.answer,restoreAnswer)}else if(restoreAnswered)showSpecial();
+  if(restoreAnswer&&current.type==='tf'){answered=true;currentAnswer=restoreAnswer;showFeedback(restoreAnswer===current.answer,restoreAnswer)}else if(restoreAnswer&&current.type==='review'){answered=true;currentAnswer=restoreAnswer;showReviewFeedback(restoreAnswer)}else if(restoreAnswered)showSpecial();
 }
 function answerTF(ans){if(answered)return;answered=true;currentAnswer=ans; const correct=ans===current.answer; if(correct){score++; if(mode==='wrong') removeWrong(current.index)} else if(ans!=='わからない') addWrong(current.index); showFeedback(correct, ans);saveSession()}
+function answerReview(ans){if(answered)return;answered=true;currentAnswer=ans;showReviewFeedback(ans);saveSession()}
 function showFeedback(correct, ans){
   const box=document.createElement('div');box.className='feedback '+(correct?'ok':'ng');
   const title=ans==='わからない'?'📘 解答を確認':correct?'✅ 正解':'❌ 不正解';
   box.innerHTML=`<h3>${title}</h3><div class="point">正解：${escapeHtml(current.answer||'資料を確認')}</div><div class="point">正解のポイント：${escapeHtml(current.point||'')}</div><div class="explain">${escapeHtml(current.explanation||'')}</div>`;
   $('feedbackArea').replaceChildren(box); postActions();
+}
+function showReviewFeedback(ans){
+  const box=document.createElement('div');box.className='feedback warn';
+  box.innerHTML=`<h3>📘 解説を確認</h3><div class="point">あなたの選択：${escapeHtml(ans)}</div><div class="point">正解のポイント：${escapeHtml(current.point||'')}</div><div class="explain">${escapeHtml(current.explanation||'')}</div>`;
+  $('feedbackArea').replaceChildren(box);postActions();
 }
 function showSpecial(){if(answered)return;answered=true; const box=document.createElement('div');box.className='feedback warn';box.innerHTML=`<h3>📘 解答・解説</h3><div class="point">正解のポイント：${escapeHtml(current.point||current.answer||'')}</div><div class="explain">${escapeHtml(current.explanation||'')}</div>`;$('feedbackArea').replaceChildren(box);$('actions').innerHTML='';
   const wrong=document.createElement('button');wrong.className='danger';wrong.textContent='間違えた・要復習に追加';wrong.onclick=()=>{addWrong(current.index);wrong.disabled=true;wrong.textContent='追加しました'};
